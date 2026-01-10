@@ -4,11 +4,29 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:TheToobe"
-    Title="TheToobe">
+    Title="TheToobe"
+    >
 
-    <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+    <TabBar>
+        <Tab Title="Settings"
+             Icon="settings.png">
+            <ShellContent ContentTemplate="{DataTemplate local:SettingsPage}"/>
+        </Tab>
+
+        <Tab Title="Map"
+             Icon="map.png">
+            <ShellContent ContentTemplate="{DataTemplate local:MapPage}"/>
+        </Tab>
+
+        <Tab Title="Navigation"
+             Icon="navigation.png">
+            <ShellContent ContentTemplate="{DataTemplate local:NavigationPage}"/>
+        </Tab>
+
+        <Tab Title="Romended Journeys"
+             Icon="reccomended.png">
+            <ShellContent ContentTemplate="{DataTemplate local:RecomendedPage}"/>
+        </Tab>
+    </TabBar>
 
 </Shell>
