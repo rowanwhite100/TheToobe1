@@ -1,12 +1,23 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="TheToobe.MapPage"
-             >
-    <VerticalStackLayout>
-        <Label 
-            Text="Map"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-    </VerticalStackLayout>
+             xmlns:local="clr-namespace:TheToobe" 
+             x:Class="TheToobe.MapPage">
+    
+    <ScrollView Orientation="Both">
+        <VerticalStackLayout>
+
+            <Label Text="staer"/>
+
+            <Image Source="tube_map1.png">
+                <Image.GestureRecognizers>
+                    <PinchGestureRecognizer PinchUpdated="OnPinchUpdated" />
+                </Image.GestureRecognizers>
+            </Image>
+
+            <Label Text="wend"/>
+        
+        </VerticalStackLayout>
+    </ScrollView>
+    
 </ContentPage>

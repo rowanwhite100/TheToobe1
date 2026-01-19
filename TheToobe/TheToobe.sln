@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatabaseLibrary", "..\Datab
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExternalAPI", "..\ExternalAPI\ExternalAPI.csproj", "{C898F966-3508-4370-9B6F-C3DDC09AEEB8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToobeLogic", "..\ToobeLogic\ToobeLogic.csproj", "{F8D27D55-66D0-44F5-B48D-90EDF8FA7E91}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{C898F966-3508-4370-9B6F-C3DDC09AEEB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C898F966-3508-4370-9B6F-C3DDC09AEEB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C898F966-3508-4370-9B6F-C3DDC09AEEB8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8D27D55-66D0-44F5-B48D-90EDF8FA7E91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8D27D55-66D0-44F5-B48D-90EDF8FA7E91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8D27D55-66D0-44F5-B48D-90EDF8FA7E91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8D27D55-66D0-44F5-B48D-90EDF8FA7E91}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -3,11 +3,63 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="TheToobe.NavigationPage"
              >
+    <ScrollView Orientation="Vertical">
+        <Grid Margin="20,35,20,20"
+              RowDefinitions="*, *, *, *, *, *" 
+              ColumnDefinitions="*, *, *, *, *"
+              Padding="20">
+
+            <Label
+                 Text="Station 1"
+                     FontFamily="London-Tube"
+                    Grid.Column="0"
+                    Grid.Row="0"
+                    />
+            
+            <Entry x:Name="Station1_input"
+                     Text="Temporary 1"
+                     Grid.Column="0"
+                    Grid.Row="1"
+                     />
+                   
+            <Label 
+                    Text="Station 2"
+                     FontFamily="London-Tube"
+                    Grid.Row="0"
+                    Grid.Column="2"
+                  
+                 />
+
+            <Entry x:Name="Station2_input"
+            Text="temp 2"
+                 Grid.Column="2"
+                Grid.Row="1"
+                   />
+
+            <Label Text="Cost"
+                       Grid.Column="0"
+                       Grid.Row="4"/>
+            
+                <Entry x:Name="Cost_Entry"
+                       Text="Journwy cost"
+                       Grid.Column="0"
+                       Grid.Row="5"
+                        IsReadOnly="True"
+                       />
+
+            <Label Text="Time"
+           Grid.Column="2"
+           Grid.Row="4"/>
+
+            <Entry x:Name="Time_Entry"
+           Text="TIME taken"
+           Grid.Column="2"
+           Grid.Row="5"
+               IsReadOnly="True"
+           />
+
+
+        </Grid>
+    </ScrollView>
     
-    <VerticalStackLayout>
-        <Label 
-            Text="Navigation"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-    </VerticalStackLayout>
 </ContentPage>

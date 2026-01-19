@@ -1,9 +1,15 @@
+
+
 namespace TheToobe;
 
 public partial class MapPage : ContentPage
 {
 	public MapPage()
 	{
-		InitializeComponent();
+        InitializeComponent();
 	}
+    void OnPinchUpdated(object sender, PinchGestureUpdatedEventArgs e)
+    {
+        // Handle the pinch
+    }
 }
