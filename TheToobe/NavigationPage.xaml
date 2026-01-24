@@ -17,7 +17,7 @@
                     />
             
             <Entry x:Name="Station1_input"
-                     Text="Temporary 1"
+                     Placeholder="Temporary 1"
                      Grid.Column="0"
                     Grid.Row="1"
                      />
@@ -31,17 +31,33 @@
                  />
 
             <Entry x:Name="Station2_input"
-            Text="temp 2"
+                Placeholder="temp 2"
                  Grid.Column="2"
                 Grid.Row="1"
                    />
+
+
+            <Label
+                Text="Output"
+                Grid.Column="4"
+                Grid.Row="0"
+                />
+
+            <Entry
+                x:Name="OutputBox"
+                Placeholder="Output"
+                Grid.Row="2"
+                Grid.Column="4"
+                MinimumHeightRequest="150"
+                
+                />
 
             <Label Text="Cost"
                        Grid.Column="0"
                        Grid.Row="4"/>
             
-                <Entry x:Name="Cost_Entry"
-                       Text="Journwy cost"
+            <Entry x:Name="Cost_Entry"
+                       Placeholder="Journwy cost"
                        Grid.Column="0"
                        Grid.Row="5"
                         IsReadOnly="True"
@@ -52,7 +68,7 @@
            Grid.Row="4"/>
 
             <Entry x:Name="Time_Entry"
-           Text="TIME taken"
+           Placeholder="TIME taken"
            Grid.Column="2"
            Grid.Row="5"
                IsReadOnly="True"
