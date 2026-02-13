@@ -12,100 +12,66 @@ using System.Text.RegularExpressions;
 
 public partial class NavigationPage : ContentPage //inheritance
 {
+    public Dictionary<string, List<string>> list = BuildAdjacencyList();
     public NavigationPage()
     {
         InitializeComponent();
-        
     }
-
     private void OnInitiateClicked(object sender, EventArgs args)
     {
-        try //exeption handling
-        {
-            
 
-            string station1 = Station1_input.Text; //getting user input for station 1
-            string station2 = Station2_input.Text; //getting user input for station 2
+        string station1 = Regex.Replace(Station1_input.Text.ToLower(), @"\b([a-z])", m => m.Value.ToUpper());
+        string station2 = Regex.Replace(Station2_input.Text.ToLower(), @"\b([a-z])", m => m.Value.ToUpper()); //regex conversion to how the database is formatted
 
 
-            var standardRegexCharacters = new Regex("^[a-zA-Z0-9 ]*$");
+        //try //exeption handling
+        //{
+        //    // SELECT “StartStation”, “EndStation” FROM “StationConnections” WHERE “StartStation” = x OR “EndStation” = x
+        //    var sql = @"
+        //        SELECT Station1, Station2
+        //        FROM Connections
+        //        WHERE Station1 = @StationInput OR Station2 = @StationInput
+        //        ";
+        //    using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); //connecting to the database
+        //    connection.Open();
+        //    using var command = new SqliteCommand(sql, connection);
+        //    command.Parameters.AddWithValue("@StationInput", station1);
 
-            if (!standardRegexCharacters.IsMatch(station1) || !standardRegexCharacters.IsMatch(station2))
-            {
-                throw new Exception("Invalid characters in station names.");
-            } //handels any special characters in station names that should be there
+        //    using var reader = command.ExecuteReader();
 
+        //    var outputLines = new System.Text.StringBuilder();
+        //    while (reader.Read())
+        //    {
+        //        var left = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
+        //        var right = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+        //        outputLines.AppendLine($"{left} - {right}");
+        //    }
 
-            station1 = Regex.Replace(station1, @"\b([a-z])", m => m.Value.ToUpper());
-            station2 = Regex.Replace(station2, @"\b([a-z])", m => m.Value.ToUpper()); //regex conversion to title case
-
-            
-
-            try //exeption handling
-            {
-
-                // SELECT “StartStation”, “EndStation” FROM “StationConnections” WHERE “StartStation” = x OR “EndStation” = x
-                var sql = @"
-                SELECT Station1, Station2
-                FROM Connections
-                WHERE Station1 = @StationInput OR Station2 = @StationInput
-                ";
-                using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); //connecting to the database
-                connection.Open();
-
-                using var command = new SqliteCommand(sql, connection);
-                command.Parameters.AddWithValue("@StationInput", station1);
-
-                using var reader = command.ExecuteReader();
-
-                var outputLines = new System.Text.StringBuilder();
-                while (reader.Read())
-                {
-                    var left = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
-                    var right = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
-                    outputLines.AppendLine($"{left} - {right}");
-                }
-
-                OutputBox.Text = outputLines.ToString().TrimEnd();
+        //    OutputBox.Text = outputLines.ToString().TrimEnd();
 
 
-                //using var command = connection.CreateCommand();
-                //command.CommandText = """
-                //SELECT “Station1”, “Station2” 
-                //FROM “Connections” 
-                //WHERE “Staion1” = $StationInput OR “Station2” = $StationInput
-                //""";
-                //command.Parameters.AddWithValue("$StationInput", StationInput);
 
-                //using var reader = command.ExecuteReader();
+        //    connection.Close();
 
-                //while (reader.Read())
-                //{
-                //    var output = reader.GetString(0);
-                //    output += " - " + reader.GetString(1);
+        //}
+        //catch (SqliteException e)
+        //{
+        //    // Display the exception
+        //    Console.WriteLine(e.Message);
+        //}
 
-                //    OutputBox.Text = output;
-                //}
-
-                connection.Close();
-
-            }
-            catch (SqliteException e)
-            {
-                // Display the exception
-                Console.WriteLine(e.Message);
-            }
-
-        }
-        catch (SqliteException e)
-        {
-            // Display the exception
-            Console.WriteLine(e.Message);
-        }
     }
-
     private void OneTextChanged(object sender, TextChangedEventArgs e)
     {
+        string oldText = e.OldTextValue;
+        string newText = e.NewTextValue;
+        var standardRegexCharacters = new Regex("^[a-zA-Z0-9 ]*$");
+
+        if (!standardRegexCharacters.IsMatch(newText))
+        {
+            Station1_input.Text = oldText;
+        }
+
         if (!string.IsNullOrWhiteSpace(Station2_input.Text) && !string.IsNullOrWhiteSpace(Station1_input.Text))
         {
             Initate_button.IsEnabled = true;
@@ -115,11 +81,20 @@ public partial class NavigationPage : ContentPage //inheritance
         {
             Initate_button.IsEnabled = false;
             Initate_button.BackgroundColor = Color.FromArgb("#838D93");
-        }
+        } 
     }
 
     private void TwoTextChanged(object sender, TextChangedEventArgs e)
     {
+        string oldText = e.OldTextValue;
+        string newText = e.NewTextValue;
+        var standardRegexCharacters = new Regex("^[a-zA-Z0-9 ]*$");
+
+        if (!standardRegexCharacters.IsMatch(newText))
+        {
+            Station2_input.Text = oldText;
+        }
+
         if (!string.IsNullOrWhiteSpace(Station2_input.Text) && !string.IsNullOrWhiteSpace(Station1_input.Text))
         {
             Initate_button.IsEnabled = true;
@@ -131,14 +106,61 @@ public partial class NavigationPage : ContentPage //inheritance
             Initate_button.BackgroundColor = Color.FromArgb("#838D93");
         }
     }
+    public static Dictionary<string, List<string>> BuildAdjacencyList()
+    {
+        var adjacencyList = new Dictionary<string, List<string>>();
+        using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); //connecting to the database
+        try
+        {
+            connection.Open();
 
-    
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+            SELECT Station1, Station2
+            FROM Connections;
+        ";
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                string start = reader.GetString(0);
+                string end = reader.GetString(1);
+
+                AddConnection(adjacencyList, start, end);
+                AddConnection(adjacencyList, end, start);
+                //undirected grahp hence bothways
+            }
+
+            connection.Close();
+        }
+        catch (SqliteException e)
+        {
+            // Display the exception
+            Console.WriteLine(e.Message);
+        }
+
+
+        return adjacencyList;
+    }
+    private static void AddConnection(Dictionary<string, List<string>> graph, string start, string end)
+    {
+        if (!graph.TryGetValue(start, out var neighbors))
+        {
+            neighbors = new List<string>();
+            graph[start] = neighbors;
+        }
+
+        if (!neighbors.Contains(end))
+        {
+            neighbors.Add(end);
+        }//this avoids duplicate entries
+    }
     private void AstarTraversal(string Station1, string Station2)
     {
         int[] bestDistance = new int[303]; // array of best distances to each node from the source
         PriorityQueue<string, int> nodesToVisit = new PriorityQueue<string, int>(); //priority queue of nodes to visit organised by heuristic + distance
         int[] predecessors = new int[303]; //array of predecessors for each node
-    
+
         for (int i = 0; i < bestDistance.Length; i++) //initialising best distances to infinity
         {
             bestDistance[i] = -1; //set all values to -1 to represent infinity as graph is unvisited
@@ -157,9 +179,15 @@ public partial class NavigationPage : ContentPage //inheritance
             // Display the exception
             Console.WriteLine(e.Message);
         }
+
+        //take out all the connections and order by smallest staion number fisrst the remove any duplicaates
+        //this also allows for a true adgecency list to be created for easyer querying later
     }
 
+
+
 }
+
 
 class Station
 { 

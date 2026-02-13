@@ -76,7 +76,7 @@
                 Grid.Row="0"
                 />
 
-            <Entry
+            <Editor
                 x:Name="OutputBox"
                 Placeholder="Output"
                 Grid.Row="2"
