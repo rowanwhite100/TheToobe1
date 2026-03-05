@@ -99,8 +99,10 @@ public partial class NavigationPage : ContentPage //inheritance
                 FROM Stations
                 WHERE Name = @StationInput
                 ";
-            string dbPath = Path.Combine(FileSystem.AppDataDirectory, "ToobeDataBase.db");
-            using var connection = new SqliteConnection(dbPath); //connecting to the database
+            string dbPath = "C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db";
+
+
+            using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); //connecting to the database
             connection.Open();
             using var command = new SqliteCommand(sql, connection);
             command.Parameters.AddWithValue("@StationInput", Station);
@@ -132,8 +134,8 @@ public partial class NavigationPage : ContentPage //inheritance
     public static Dictionary<int, List<int>> BuildAdjacencyList()
     {
         var adjacencyList = new Dictionary<int, List<int>>();
-        string dbPath = Path.Combine(FileSystem.AppDataDirectory, "ToobeDataBase.db");
-        using var connection = new SqliteConnection(dbPath); //connecting to the database
+        
+        using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); //connecting to the database
         try
         {
             connection.Open();
@@ -259,8 +261,9 @@ public partial class NavigationPage : ContentPage //inheritance
                         FROM Stations
                         WHERE Name = @StationInput
                         ";
-            string dbPath = Path.Combine(FileSystem.AppDataDirectory, "ToobeDataBase.db");
-            using var connection = new SqliteConnection(dbPath);
+            string dbPath = "C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db";
+
+            using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\"");
             connection.Open();
 
             using var command = new SqliteCommand(sql, connection);
