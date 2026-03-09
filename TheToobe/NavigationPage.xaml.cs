@@ -7,6 +7,7 @@ using Microsoft.Maui.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using SQLite;
 using System;
+using System.Diagnostics;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
@@ -20,22 +21,31 @@ public partial class NavigationPage : ContentPage //inheritance
     {
         InitializeComponent();
     }
-    private void OnInitiateClicked(object sender, EventArgs args)
+    private async void OnInitiateClicked(object sender, EventArgs args) //asyncronous method
     {
-
-        string origin = Regex.Replace(Station1_input.Text.ToLower(), @"\b([a-z])", m => m.Value.ToUpper());
-        string dstination = Regex.Replace(Station2_input.Text.ToLower(), @"\b([a-z])", m => m.Value.ToUpper()); //regex conversion to how the database is formatted
+        string origin = Regex.Replace(Station1_input.Text.Trim().ToLower(), @"\b([a-z])", m => m.Value.ToUpper());
+        string dstination = Regex.Replace(Station2_input.Text.Trim().ToLower(), @"\b([a-z])", m => m.Value.ToUpper()); //regex conversion to how the database is formatted
 
         int Station1ID = CheckStation(origin);
         int Station2ID = CheckStation(dstination);
-
-        if (Station1ID == -1 || Station2ID == -1)
+        
+        if (Station1ID == -1 && Station2ID == -1)
         {
-            DisplayAlert("Error", "One or both of the stations entered were not found. Please check your spelling and try again.", "OK");
+            await DisplayAlert("Error", "Neither station was found. Please check your spelling and try again.", "OK");
+        }
+        else if (Station1ID == -1)
+        {
+            await DisplayAlert("Error", "Station 1 was not found. Please check your spelling and try again.", "OK");
+        }
+        else if (Station2ID == -1)
+        {
+            OutputBox.Text = (origin + " " + dstination);
+            await DisplayAlert("Error", "Station 2 was not found. Please check your spelling and try again.", "OK");  
         }
         else
         {
-            OutputBox.Text =  AstarTraversal(Station1ID, Station2ID);
+
+            OutputBox.Text = AstarTraversal(Station1ID, Station2ID);
             //navigate to the next page and pass the station
         }
     }
@@ -84,31 +94,25 @@ public partial class NavigationPage : ContentPage //inheritance
         }
     }
 
-
-
     //start of data proccessing 
-    public Dictionary<int, List<int>> graph = BuildAdjacencyList();//initalises the graph as public
-
-
+    public Dictionary<int, List<(int, double, double, double, double, double)>> graph = BuildAdjacencyList();//initalises the graph as public
     public int CheckStation(string Station)
     {
         try //exeption handling
         {
-            var sql = @"
-                SELECT Name, StationID
-                FROM Stations
-                WHERE Name = @StationInput
-                ";
-            string dbPath = "C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db";
-
-
             using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); //connecting to the database
             connection.Open();
+
+            var sql = @"
+                SELECT Name, Station_ID
+                FROM Stations
+                WHERE Name LIKE @StationInput
+                ";
             using var command = new SqliteCommand(sql, connection);
-            command.Parameters.AddWithValue("@StationInput", Station);
+            command.Parameters.AddWithValue("@StationInput", Station + "%");
 
             using var reader = command.ExecuteReader();
-
+            
             if (reader.Read())
             {
                 string name = reader.GetString(0);
@@ -116,185 +120,179 @@ public partial class NavigationPage : ContentPage //inheritance
 
                 if (name == Station)
                 {
-                    return id;
-                }
-                    
+                    return id;//returns stattion ID on found
+                } 
             }
-
-            return -1; //station not found
+            else
+            {
+                DisplayAlert("error", $"'{Station}' not found in db", "OK");
+                return -1;
+            }
+        
         }
-        catch (SqliteException e)
+        catch (Exception e)
         {
             // Display the exception
-            Console.WriteLine(e.Message);
+            DisplayAlert("sql", $"sql executed for '{e.Message}'", "OK");
         }
 
+        DisplayAlert("error", $"something bad went worng for {Station}", "OK");
         return -1; //station not found
     }
-    public static Dictionary<int, List<int>> BuildAdjacencyList()
+    public static Dictionary<int, List<(int neighbour, double distance, double Lat1, double Long1, double Lat2, double Long2)>> BuildAdjacencyList()
     {
-        var adjacencyList = new Dictionary<int, List<int>>();
+        var adjacencyList = new Dictionary<int, List<(int, double, double, double,double, double)>>();
         
         using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); //connecting to the database
         try
         {
             connection.Open();
 
-            var command = connection.CreateCommand();
-            command.CommandText = @"
+            var ConnectionCommand = connection.CreateCommand();
+            ConnectionCommand.CommandText = @"
             SELECT Station1, Station2
             FROM Connections
+            ";//returns station connections IDs
+
+            var PositionCommand = connection.CreateCommand();
+            PositionCommand.CommandText = @"
+            SELECT Station_ID,  Latitude, Longitude
+            FROM Stations
             ";
 
-            using var reader = command.ExecuteReader();
+            var positions = new Dictionary<int, (double Lat, double Long)>();//position of each station
+
+            using var posReader = PositionCommand.ExecuteReader();
+            while (posReader.Read())
+            {
+                int id = posReader.GetInt32(0);
+                double lat = posReader.GetDouble(1);
+                double lon = posReader.GetDouble(2);
+
+                positions[id] = (lat, lon);
+            }
+
+            using var reader = ConnectionCommand.ExecuteReader();
             while (reader.Read())
             {
-                int start = reader.GetInt32(0);
-                int end = reader.GetInt32(1);
+                int startStation = reader.GetInt32(0);
+                int endStation = reader.GetInt32(1);
 
-                AddConnection(adjacencyList, start, end);
-                AddConnection(adjacencyList, end, start);
+                var (startLat, startLong) = positions[startStation];
+                var (endLat, endLong) = positions[endStation];
+
+                double distance = DistanceConverter(startLat, startLong, endLat, endLong);
+
+                AddConnection(adjacencyList, startStation, endStation, distance, endLat, endLong, startLat, startLong);
+                AddConnection(adjacencyList, endStation, startStation, distance, startLat, startLong, endLat, endLong);
+                //stores the neigbours coords (at 4,5) THEN the current (at 6,7)
+
                 //undirected grahp hence bothways
             }
 
             connection.Close();
         }
-        catch (SqliteException e)
+        catch (Exception e)
         {
             // Display the exception
-            Console.WriteLine(e.Message);
+            Console.Write($"Error {e.Message}");
         }
-
 
         return adjacencyList;
     }
-    private static void AddConnection(Dictionary<int, List<int>> graph, int start, int end)
+    private static void AddConnection(Dictionary<int, List<(int station, double distance, double Lat1, double Long1, double Lat2, double Long2)>> graph, int startStat, int endStat, double distance, double Lat1, double Long1, double Lat2, double Long2)
     {
-        if (!graph.TryGetValue(start, out var neighbors))
+        if (!graph.TryGetValue(startStat, out var neighbors))
         {
-            neighbors = new List<int>();
-            graph[start] = neighbors;
+            neighbors = new List<(int, double, double, double, double, double)>();
+            graph[startStat] = neighbors;//new list at correct key
         }
-
-        if (!neighbors.Contains(end))
+        
+        if (!neighbors.Any(x => x.station == endStat))//checks each station value x in niebours 
         {
-            neighbors.Add(end);
+            neighbors.Add((endStat,distance,Lat1,Long1,Lat2,Long2));
         }//this avoids duplicate entries
     }
+
     private string AstarTraversal(int origin, int destination)
     {
-        int[] bestDistance = new int[310]; // array of best distances to each node from the source
-        PriorityQueue<int, int> nodesToVisit = new PriorityQueue<int, int>(); //priority queue of nodes to visit organised by ID, heuristic + distance
+        double[] bestDistance = new double[310]; // array of best distances to each node from the source
+        PriorityQueue<int, double> nodesToVisit = new PriorityQueue<int, double>(); //priority queue of nodes to visit organised by ID, heuristic + distance
         var nodePredeccesors = new Dictionary<int, List<int>>(); //array of predecessors for each node  
-        
+
         for (int i = 0; i < bestDistance.Length; i++) //initialising data structures
         {
-            bestDistance[i] = int.MaxValue; //set all values to max to represent infinity as graph is unvisited
+            bestDistance[i] = double.MaxValue; //set all values to max to represent infinity as graph is unvisited
             nodePredeccesors[i] = new List<int>(); //initialise the list of predecessors for each node
         }
         bestDistance[Convert.ToInt32(origin)] = 0; //distance to source is 0
         nodesToVisit.Enqueue(origin, 0); //enqueue origin with 0 distance
 
-        double[] destinationLatLong = getLatLong(destination);
-        double destinationLat = destinationLatLong[0];
-        double destinationLong = destinationLatLong[1];
+        //Dictionary<int, List<(int station, double distance)>> graph, int startStat, int endStat, double distance)
+        //format of the adjacency list
 
-        double[] originLatLong = getLatLong(origin);
-        double originLat = originLatLong[0];
-        double originLong = originLatLong[1];
+        var originNode1 = graph[origin][0];
+        double originLat = originNode1.Item5;
+        double originLong = originNode1.Item6;
+
+        var DestinationNode1 = graph[destination][0];
+        double DestinationLat = DestinationNode1.Item5;
+        var DestinationLong = DestinationNode1.Item6;
 
         while (nodesToVisit.Count > 0)//A* traversal loop
         {
-            nodesToVisit.TryDequeue(out int current, out int priority);//deques the next node and its priority
+            nodesToVisit.TryDequeue(out int current, out double priority);//deques the next node and its priority
 
             if (bestDistance[current] >= priority)//handles duplicates by skipping them if they have a higher priority than the best distance (initally set to max)
             {
-                double[] currentLatLong = getLatLong(current);
-                double currentLat = currentLatLong[0];
-                double currentLong = currentLatLong[1];
-
-                double currentDistance = DistanceConverter(originLat, originLong, currentLat, currentLong);
-
-                int[] neighbours = graph[current].ToArray(); //gets the neighbours of the current node
-
-                foreach (int i in neighbours)//explores all neighbours
+                foreach (var neighbour in graph[current])//explores all neighbours
                 {
-                    double[] neighbourLatLong = getLatLong(i);
-                    double neighbourLat = neighbourLatLong[0];
-                    double neighbourLong = neighbourLatLong[1];
+                    int neigbourStation = neighbour.Item1;
+                    double nextDistance = neighbour.Item2;
 
-                    double heuristic = DistanceConverter(neighbourLat, neighbourLong, destinationLat, destinationLong);
-                    double nextDistance = DistanceConverter(currentLat, currentLong, neighbourLat, neighbourLong);
+                    double neighbourLat = neighbour.Item5;
+                    double neighbourLong = neighbour.Item6;
+
+                    double currentDistance = bestDistance[current];
+
+                    //double heuristic = DistanceConverter(neighbourLat, neighbourLong, destinationLat, destinationLong);
+                    //double nextDistance = DistanceConverter(currentLat, currentLong, neighbourLat, neighbourLong);
+
+                    double heuristic = DistanceConverter(DestinationLat,DestinationLong,neighbourLat,neighbourLong);
 
                     double neighbourPriority = Math.Round(currentDistance + nextDistance + heuristic, 0);
 
-                    nodesToVisit.Enqueue(i, Convert.ToInt16(neighbourPriority));
+                    nodesToVisit.Enqueue(neigbourStation, neighbourPriority);
 
-                    if (bestDistance[i] > neighbourPriority)
+                    if (bestDistance[neigbourStation] > neighbourPriority)
                     {
-                        bestDistance[i] = Convert.ToInt16(neighbourPriority);
+                        bestDistance[neigbourStation] = neighbourPriority;
 
                         int[] Predecessors = nodePredeccesors[current].ToArray();
                         Predecessors = Predecessors.Append(current).ToArray(); //adds the current node to the list of predecessors for the neighbour
 
-                        nodePredeccesors[i] = Predecessors.ToList(); //updates the list of predecessors for the neighbour
+                        nodePredeccesors[neigbourStation] = Predecessors.ToList(); //updates the list of predecessors for the neighbour
                     }
                 }
 
             }
-          
+
         }
 
-        int[] shortestPath = nodePredeccesors[destination].ToArray(); 
+        int[] shortestPath = nodePredeccesors[destination].ToArray();
         shortestPath = shortestPath.Append(destination).ToArray();
         string pathString = string.Join(" -> ", shortestPath);
 
         return pathString;
     }
 
-    private double[] getLatLong(int ID)
-    {
-        try
-        {
-            var sql = @"
-                        SELECT Latitude, Longitude
-                        FROM Stations
-                        WHERE Name = @StationInput
-                        ";
-            string dbPath = "C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db";
-
-            using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\"");
-            connection.Open();
-
-            using var command = new SqliteCommand(sql, connection);
-            command.Parameters.AddWithValue("@StationInput", ID);
-            using var reader = command.ExecuteReader();
-
-            if (reader.Read())
-            {
-                double Lat = reader.GetDouble(0);
-                double Long = reader.GetDouble(1);
-                connection.Close();
-                return new double[] { Lat, Long };
-            }
-            
-            connection.Close();
-         
-        }
-        catch (SqliteException e)
-        {
-            // Display the exception
-            Console.WriteLine(e.Message);
-        }
-        return new double[] {}; //error case
-    }
-    private double DistanceConverter(double startLat, double startLong, double endLat, double endLong)
+    private static double DistanceConverter(double startLat, double startLong, double endLat, double endLong)
     {
         //this mwthod does distances, and can be used also ofor heuristic calculations
         double radius = 6378.137; //radius of the earth in km
         double pi = 3.14159;
 
-        double dLat = (endLat * pi) / 180 - (startLat * pi) / 180; //latitude distance (converts to radians)
+        double dLat = (endLat * pi) / 180 - (startLat * pi) / 180; //latitude distance in rad
         double dLong = (endLong * pi) / 180 - (startLong * pi) / 180; //longitude distance (converts to radians)
 
         double Haversine = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) + Math.Cos(startLat * pi / 180) * Math.Cos(endLat * pi / 180) * Math.Sin(dLong / 2) * Math.Sin(dLong / 2); //the Haversine formula (square of half the length of a chord)
@@ -304,5 +302,4 @@ public partial class NavigationPage : ContentPage //inheritance
         d = d * 1000; //convert to meters
         return Math.Round(d,3);
     }
-
 }
