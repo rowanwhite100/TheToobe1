@@ -13,7 +13,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using static SQLite.SQLite3;
 
-
 public partial class NavigationPage : ContentPage //inheritance
 {
     //start of UI code
@@ -49,16 +48,31 @@ public partial class NavigationPage : ContentPage //inheritance
             //navigate to the next page and pass the station
         }
     }
-    private void OneTextChanged(object sender, TextChangedEventArgs e)
+    private async void OneTextChanged(object sender, TextChangedEventArgs e)
     {
         string oldText = e.OldTextValue;
         string newText = e.NewTextValue;
-        var standardRegexCharacters = new Regex("^[a-zA-Z0-9 ]*$");
-
-        if (!standardRegexCharacters.IsMatch(newText))
+        var standardRegexCharacters = new Regex("^[a-zA-Z0-9.' ]*$");
+        try
         {
-            Station1_input.Text = oldText;
+            if (!standardRegexCharacters.IsMatch(newText))
+            {
+                try
+                {
+                    Station1_input.Text = oldText;
+
+                }
+                catch
+                {
+                    Station1_input.Text = "";
+                }
+            }
         }
+        catch
+        {
+            await DisplayAlert("error", "invalid text entered", "ok");
+        }
+        
 
         if (!string.IsNullOrWhiteSpace(Station2_input.Text) && !string.IsNullOrWhiteSpace(Station1_input.Text))
         {
@@ -71,15 +85,31 @@ public partial class NavigationPage : ContentPage //inheritance
             Initate_button.BackgroundColor = Color.FromArgb("#838D93");
         } 
     }
-    private void TwoTextChanged(object sender, TextChangedEventArgs e)
+    private async void TwoTextChanged(object sender, TextChangedEventArgs e)
     {
         string oldText = e.OldTextValue;
         string newText = e.NewTextValue;
-        var standardRegexCharacters = new Regex("^[a-zA-Z0-9 ]*$");
-
-        if (!standardRegexCharacters.IsMatch(newText))
+        var standardRegexCharacters = new Regex("^[a-zA-Z0-9.' ]*$");
+        try
         {
-            Station2_input.Text = oldText;
+            if (!standardRegexCharacters.IsMatch(newText))
+            {
+                try
+                {
+                    Station2_input.Text = oldText;
+
+                }
+                catch
+                {
+                    Station2_input.Text = "";
+                }
+
+                
+            }
+        }
+        catch
+        {
+            await DisplayAlert("error", "invalid text entered", "ok");
         }
 
         if (!string.IsNullOrWhiteSpace(Station2_input.Text) && !string.IsNullOrWhiteSpace(Station1_input.Text))
@@ -95,7 +125,9 @@ public partial class NavigationPage : ContentPage //inheritance
     }
 
     //start of data proccessing 
-    public Dictionary<int, List<(int, double, double, double, double, double)>> graph = BuildAdjacencyList();//initalises the graph as public
+    public static Dictionary<int, (double Latitude, double Longitude)> StationCoords = new Dictionary<int, (double Latitude, double Longitude)>();
+
+    public Dictionary<int, List<(int, double)>> graph = BuildAdjacencyList();//initalises the graph as public
     public int CheckStation(string Station)
     {
         try //exeption handling
@@ -139,9 +171,9 @@ public partial class NavigationPage : ContentPage //inheritance
         DisplayAlert("error", $"something bad went worng for {Station}", "OK");
         return -1; //station not found
     }
-    public static Dictionary<int, List<(int neighbour, double distance, double Lat1, double Long1, double Lat2, double Long2)>> BuildAdjacencyList()
+    public static Dictionary<int, List<(int neighbour, double distance)>> BuildAdjacencyList()
     {
-        var adjacencyList = new Dictionary<int, List<(int, double, double, double,double, double)>>();
+        var adjacencyList = new Dictionary<int, List<(int, double)>>();
         
         using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); //connecting to the database
         try
@@ -160,8 +192,7 @@ public partial class NavigationPage : ContentPage //inheritance
             FROM Stations
             ";
 
-            var positions = new Dictionary<int, (double Lat, double Long)>();//position of each station
-
+           
             using var posReader = PositionCommand.ExecuteReader();
             while (posReader.Read())
             {
@@ -169,8 +200,9 @@ public partial class NavigationPage : ContentPage //inheritance
                 double lat = posReader.GetDouble(1);
                 double lon = posReader.GetDouble(2);
 
-                positions[id] = (lat, lon);
+                StationCoords[id] = (lat, lon);
             }
+          
 
             using var reader = ConnectionCommand.ExecuteReader();
             while (reader.Read())
@@ -178,13 +210,13 @@ public partial class NavigationPage : ContentPage //inheritance
                 int startStation = reader.GetInt32(0);
                 int endStation = reader.GetInt32(1);
 
-                var (startLat, startLong) = positions[startStation];
-                var (endLat, endLong) = positions[endStation];
+                var (startLat, startLong) = StationCoords[startStation];
+                var (endLat, endLong) = StationCoords[endStation];
 
                 double distance = DistanceConverter(startLat, startLong, endLat, endLong);
 
-                AddConnection(adjacencyList, startStation, endStation, distance, endLat, endLong, startLat, startLong);
-                AddConnection(adjacencyList, endStation, startStation, distance, startLat, startLong, endLat, endLong);
+                AddConnection(adjacencyList, startStation, endStation, distance);
+                AddConnection(adjacencyList, endStation, startStation, distance);
                 //stores the neigbours coords (at 4,5) THEN the current (at 6,7)
 
                 //undirected grahp hence bothways
@@ -200,20 +232,19 @@ public partial class NavigationPage : ContentPage //inheritance
 
         return adjacencyList;
     }
-    private static void AddConnection(Dictionary<int, List<(int station, double distance, double Lat1, double Long1, double Lat2, double Long2)>> graph, int startStat, int endStat, double distance, double Lat1, double Long1, double Lat2, double Long2)
-    {
+    private static void AddConnection(Dictionary<int, List<(int station, double distance)>> graph, int startStat, int endStat, double distance) 
+    { 
         if (!graph.TryGetValue(startStat, out var neighbors))
         {
-            neighbors = new List<(int, double, double, double, double, double)>();
+            neighbors = new List<(int, double)>();
             graph[startStat] = neighbors;//new list at correct key
         }
         
         if (!neighbors.Any(x => x.station == endStat))//checks each station value x in niebours 
         {
-            neighbors.Add((endStat,distance,Lat1,Long1,Lat2,Long2));
+            neighbors.Add((endStat,distance));
         }//this avoids duplicate entries
     }
-
     private string AstarTraversal(int origin, int destination)
     {
         double[] bestDistance = new double[310]; // array of best distances to each node from the source
@@ -231,13 +262,8 @@ public partial class NavigationPage : ContentPage //inheritance
         //Dictionary<int, List<(int station, double distance)>> graph, int startStat, int endStat, double distance)
         //format of the adjacency list
 
-        var originNode1 = graph[origin][0];
-        double originLat = originNode1.Item5;
-        double originLong = originNode1.Item6;
-
-        var DestinationNode1 = graph[destination][0];
-        double DestinationLat = DestinationNode1.Item5;
-        var DestinationLong = DestinationNode1.Item6;
+        (double originLat, double originLong) = StationCoords[origin];
+        (double DestinationLat, double DestinationLong) = StationCoords[destination];
 
         while (nodesToVisit.Count > 0)//A* traversal loop
         {
@@ -250,13 +276,9 @@ public partial class NavigationPage : ContentPage //inheritance
                     int neigbourStation = neighbour.Item1;
                     double nextDistance = neighbour.Item2;
 
-                    double neighbourLat = neighbour.Item5;
-                    double neighbourLong = neighbour.Item6;
+                    (double neighbourLat, double neighbourLong) = StationCoords[neighbour.Item1];
 
                     double currentDistance = bestDistance[current];
-
-                    //double heuristic = DistanceConverter(neighbourLat, neighbourLong, destinationLat, destinationLong);
-                    //double nextDistance = DistanceConverter(currentLat, currentLong, neighbourLat, neighbourLong);
 
                     double heuristic = DistanceConverter(DestinationLat,DestinationLong,neighbourLat,neighbourLong);
 
@@ -274,18 +296,14 @@ public partial class NavigationPage : ContentPage //inheritance
                         nodePredeccesors[neigbourStation] = Predecessors.ToList(); //updates the list of predecessors for the neighbour
                     }
                 }
-
             }
-
         }
 
         int[] shortestPath = nodePredeccesors[destination].ToArray();
-        shortestPath = shortestPath.Append(destination).ToArray();
-        string pathString = string.Join(" -> ", shortestPath);
+        shortestPath = shortestPath.Append(destination).ToArray();   
 
-        return pathString;
+        return getOutput(shortestPath);
     }
-
     private static double DistanceConverter(double startLat, double startLong, double endLat, double endLong)
     {
         //this mwthod does distances, and can be used also ofor heuristic calculations
@@ -301,5 +319,114 @@ public partial class NavigationPage : ContentPage //inheritance
         double d = angle * radius; //in km
         d = d * 1000; //convert to meters
         return Math.Round(d,3);
+    }
+    private string getOutput(int[] stationID)
+    {//takes array of in IDs adn converts to path
+
+        var stationNames = new Dictionary<int, string>();
+
+        try
+        {
+            using var SQLconnection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); //connecting to the database
+            var getNameCommand = SQLconnection.CreateCommand();
+
+            SQLconnection.Open();
+
+            string[] path = stationID.Select((ID, index) => $"@{index}").ToArray();//gets id inputs and converts index for sql format
+
+            getNameCommand.CommandText = $@"
+            SELECT Station_ID, Name
+            FROM Stations
+            WHERE Station_ID IN ({string.Join(",", path)})
+            ";//sql query   
+
+            
+            var lines = new List<int>();
+
+            for (int i = 0; i < stationID.Length; i++)
+            {
+                getNameCommand.Parameters.AddWithValue(path[i], stationID[i]);
+            }
+
+            using var reader2 = getNameCommand.ExecuteReader();
+
+            while (reader2.Read())
+            {
+                int id = reader2.GetInt32(0);
+                string name = reader2.GetString(1);
+
+                stationNames[id] = name;
+            }
+            SQLconnection.Close();
+
+
+            SQLconnection.Open();
+
+            var lineNames = new Dictionary<int, string>
+            {
+                {1, "Bakerloo Line"},
+                {2, "Central Line" },
+                {3, "Circle Line" },
+                {4, "District Line" },
+                {5, "East London Line" },
+                {6, "Hammersmith & City Line" },
+                {7, "Jubilee Line" },
+                {8, "Metropolitan Line" },
+                {9, "Northern Line" },
+                {10, "Piccadilly Line" },
+                {11, "Victoria Line" },
+                {12, "Waterloo & City Line" },
+                {13, "DLR" }
+            };
+
+            string output = "";
+
+            int lastLine = -1;
+
+            for (int i = 0; i < stationID.Length - 1; i++)
+            {
+                int station1 = stationID[i];
+                int station2 = stationID[i + 1];
+
+                var lineCommand = SQLconnection.CreateCommand();
+
+                lineCommand.CommandText = @"
+                SELECT Line
+                FROM Connections
+                WHERE 
+                (Station1 = @station1 AND Station2 = @station2) OR (Station1 = @station2 AND Station2 = @station1)    
+                ";
+
+                lineCommand.Parameters.AddWithValue("@station1", station1);
+                lineCommand.Parameters.AddWithValue("@station2", station2);
+
+                int lineID = Convert.ToInt32(lineCommand.ExecuteScalar());
+
+                if (lastLine == -1)
+                {
+                    output += $"FROM {stationNames[station1]} USING {lineNames[lineID]} TO ";
+                }
+                else if (lastLine != lineID)
+                {
+                    output += $"{stationNames[station1]} \nFROM {stationNames[station1]} USING {lineNames[lineID]} TO ";
+                }
+                
+                if (i == stationID.Length - 2)
+                {
+                    output += $"{stationNames[station1]}";
+                }
+
+                lastLine = lineID;
+            }
+            
+            return output;
+            //return string.Join(" TO ", stationID.Select(id => stationNames[id]));
+        }
+        catch(Exception e)
+        {
+            DisplayAlert("big error", $"someone did a doodoo - \n{e.Message}", "sure thing buddy");
+        }
+
+        return "error no path returned";
     }
 }

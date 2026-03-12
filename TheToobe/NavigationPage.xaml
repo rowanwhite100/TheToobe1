@@ -6,7 +6,7 @@
     <ScrollView Orientation="Vertical">
         <Grid Margin="20,35,20,20"
               RowDefinitions="*, *, *, *, *, *" 
-              ColumnDefinitions="*, *, *, *, *"
+              ColumnDefinitions="100, 50, 100, 50, *"
               Padding="20">
 
             <Label
@@ -81,7 +81,8 @@
                 Placeholder="Output"
                 Grid.Row="2"
                 Grid.Column="4"
-                MinimumHeightRequest="150"
+                MinimumHeightRequest="300"
+                MinimumWidthRequest="200"
                 IsReadOnly="True"
                 />
 
