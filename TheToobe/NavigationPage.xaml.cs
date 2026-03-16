@@ -1,32 +1,26 @@
 namespace TheToobe;
 
 using Microsoft.Data.Sqlite;
-using Microsoft.Maui;
-using Microsoft.Maui.ApplicationModel.DataTransfer;
 using Microsoft.Maui.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using SQLite;
 using System;
-using System.Diagnostics;
-using System.Reflection.PortableExecutable;
-using System.Security.Cryptography.X509Certificates;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using static SQLite.SQLite3;
 
-public partial class NavigationPage : ContentPage //inheritance
+public partial class NavigationPage : ContentPage
 {
-    //start of UI code
     public NavigationPage()
     {
         InitializeComponent();
     }
-    private async void OnInitiateClicked(object sender, EventArgs args) //asyncronous method
+    private async void OnInitiateClicked(object sender, EventArgs args) 
     {
-        string origin = Regex.Replace(Station1_input.Text.Trim().ToLower(), @"\b([a-z])", m => m.Value.ToUpper());
-        string dstination = Regex.Replace(Station2_input.Text.Trim().ToLower(), @"\b([a-z])", m => m.Value.ToUpper()); //regex conversion to how the database is formatted
+        var textInfo = new CultureInfo("en-UK",false).TextInfo;
+        string origin = textInfo.ToTitleCase(Station1_input.Text.Trim().ToLower());
+        string detination = textInfo.ToTitleCase(Station2_input.Text.Trim().ToLower());
 
         int Station1ID = CheckStation(origin);
-        int Station2ID = CheckStation(dstination);
+        int Station2ID = CheckStation(detination);
         
         if (Station1ID == -1 && Station2ID == -1)
         {
@@ -38,107 +32,93 @@ public partial class NavigationPage : ContentPage //inheritance
         }
         else if (Station2ID == -1)
         {
-            OutputBox.Text = (origin + " " + dstination);
             await DisplayAlert("Error", "Station 2 was not found. Please check your spelling and try again.", "OK");  
         }
         else
         {
-
             OutputBox.Text = AstarTraversal(Station1ID, Station2ID);
-            //navigate to the next page and pass the station
         }
     }
-    private async void OneTextChanged(object sender, TextChangedEventArgs e)
+    private void OneTextChanged(object sender, TextChangedEventArgs e)
     {
         string oldText = e.OldTextValue;
         string newText = e.NewTextValue;
-        var standardRegexCharacters = new Regex("^[a-zA-Z0-9.' ]*$");
-        try
-        {
-            if (!standardRegexCharacters.IsMatch(newText))
-            {
-                try
-                {
-                    Station1_input.Text = oldText;
 
-                }
-                catch
-                {
-                    Station1_input.Text = "";
-                }
-            }
-        }
-        catch
-        {
-            await DisplayAlert("error", "invalid text entered", "ok");
-        }
-        
+        enableButton(oldText, newText, 1);
+    }
+    private void TwoTextChanged(object sender, TextChangedEventArgs e)
+    {
+        string oldText = e.OldTextValue;
+        string newText = e.NewTextValue;
 
-        if (!string.IsNullOrWhiteSpace(Station2_input.Text) && !string.IsNullOrWhiteSpace(Station1_input.Text))
+        enableButton(oldText, newText, 2);
+    }
+    private void enableButton(string oldText, string newText, int entryBoxId)
+    {
+        var standardRegexCharacters = new Regex("^[a-zA-Z0-9 .'-]*$");
+
+        if (oldText == null)
         {
-            Initate_button.IsEnabled = true;
-            Initate_button.BackgroundColor = Color.FromArgb("#FFFFFF");//to fix
+            oldText = "";
+        }
+
+        if (entryBoxId == 1)
+         {
+             if (!standardRegexCharacters.IsMatch(newText))
+             {
+                 try
+                 {
+                     Station1_input.Text = oldText;
+                 }
+                 catch
+                 {
+                     Station1_input.Text = "error";
+                 }
+             }
         }
         else
-        {
-            Initate_button.IsEnabled = false;
-            Initate_button.BackgroundColor = Color.FromArgb("#838D93");
-        } 
-    }
-    private async void TwoTextChanged(object sender, TextChangedEventArgs e)
-    {
-        string oldText = e.OldTextValue;
-        string newText = e.NewTextValue;
-        var standardRegexCharacters = new Regex("^[a-zA-Z0-9.' ]*$");
-        try
         {
             if (!standardRegexCharacters.IsMatch(newText))
             {
                 try
                 {
                     Station2_input.Text = oldText;
-
                 }
                 catch
                 {
-                    Station2_input.Text = "";
+                    Station2_input.Text = "error";
                 }
-
-                
             }
-        }
-        catch
-        {
-            await DisplayAlert("error", "invalid text entered", "ok");
         }
 
         if (!string.IsNullOrWhiteSpace(Station2_input.Text) && !string.IsNullOrWhiteSpace(Station1_input.Text))
         {
             Initate_button.IsEnabled = true;
-            Initate_button.BackgroundColor = Color.FromArgb("#FFFFFF");
+            Initate_button.BackgroundColor = Color.FromArgb("#FFFFFF");//TOFIX colour changing
+            Initate_button.Text = "Navigate!";
         }
         else
         {
             Initate_button.IsEnabled = false;
             Initate_button.BackgroundColor = Color.FromArgb("#838D93");
+            Initate_button.Text = "Enter station names";
         }
     }
-
-    //start of data proccessing 
+ 
     public static Dictionary<int, (double Latitude, double Longitude)> StationCoords = new Dictionary<int, (double Latitude, double Longitude)>();
 
-    public Dictionary<int, List<(int, double)>> graph = BuildAdjacencyList();//initalises the graph as public
+    public Dictionary<int, List<(int, double)>> graph = BuildAdjacencyList();
     public int CheckStation(string Station)
     {
-        try //exeption handling
+        try
         {
-            using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); //connecting to the database
+            using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); 
             connection.Open();
 
             var sql = @"
                 SELECT Name, Station_ID
                 FROM Stations
-                WHERE Name LIKE @StationInput
+                WHERE Name = @StationInput
                 ";
             using var command = new SqliteCommand(sql, connection);
             command.Parameters.AddWithValue("@StationInput", Station + "%");
@@ -152,7 +132,7 @@ public partial class NavigationPage : ContentPage //inheritance
 
                 if (name == Station)
                 {
-                    return id;//returns stattion ID on found
+                    return id;
                 } 
             }
             else
@@ -164,7 +144,7 @@ public partial class NavigationPage : ContentPage //inheritance
         }
         catch (Exception e)
         {
-            // Display the exception
+            
             DisplayAlert("sql", $"sql executed for '{e.Message}'", "OK");
         }
 
@@ -175,7 +155,7 @@ public partial class NavigationPage : ContentPage //inheritance
     {
         var adjacencyList = new Dictionary<int, List<(int, double)>>();
         
-        using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); //connecting to the database
+        using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\"");
         try
         {
             connection.Open();
@@ -226,7 +206,6 @@ public partial class NavigationPage : ContentPage //inheritance
         }
         catch (Exception e)
         {
-            // Display the exception
             Console.Write($"Error {e.Message}");
         }
 
@@ -237,7 +216,7 @@ public partial class NavigationPage : ContentPage //inheritance
         if (!graph.TryGetValue(startStat, out var neighbors))
         {
             neighbors = new List<(int, double)>();
-            graph[startStat] = neighbors;//new list at correct key
+            graph[startStat] = neighbors;
         }
         
         if (!neighbors.Any(x => x.station == endStat))//checks each station value x in niebours 
@@ -253,21 +232,18 @@ public partial class NavigationPage : ContentPage //inheritance
 
         for (int i = 0; i < bestDistance.Length; i++) //initialising data structures
         {
-            bestDistance[i] = double.MaxValue; //set all values to max to represent infinity as graph is unvisited
-            nodePredeccesors[i] = new List<int>(); //initialise the list of predecessors for each node
+            bestDistance[i] = double.MaxValue; //max distance is unvisited
+            nodePredeccesors[i] = new List<int>();
         }
-        bestDistance[Convert.ToInt32(origin)] = 0; //distance to source is 0
-        nodesToVisit.Enqueue(origin, 0); //enqueue origin with 0 distance
-
-        //Dictionary<int, List<(int station, double distance)>> graph, int startStat, int endStat, double distance)
-        //format of the adjacency list
+        bestDistance[Convert.ToInt32(origin)] = 0;
+        nodesToVisit.Enqueue(origin, 0); 
 
         (double originLat, double originLong) = StationCoords[origin];
         (double DestinationLat, double DestinationLong) = StationCoords[destination];
 
-        while (nodesToVisit.Count > 0)//A* traversal loop
+        while (nodesToVisit.Count > 0)
         {
-            nodesToVisit.TryDequeue(out int current, out double priority);//deques the next node and its priority
+            nodesToVisit.TryDequeue(out int current, out double priority);
 
             if (bestDistance[current] >= priority)//handles duplicates by skipping them if they have a higher priority than the best distance (initally set to max)
             {
@@ -306,39 +282,38 @@ public partial class NavigationPage : ContentPage //inheritance
     }
     private static double DistanceConverter(double startLat, double startLong, double endLat, double endLong)
     {
-        //this mwthod does distances, and can be used also ofor heuristic calculations
         double radius = 6378.137; //radius of the earth in km
         double pi = 3.14159;
 
-        double dLat = (endLat * pi) / 180 - (startLat * pi) / 180; //latitude distance in rad
-        double dLong = (endLong * pi) / 180 - (startLong * pi) / 180; //longitude distance (converts to radians)
+        double dLat = (endLat * pi) / 180 - (startLat * pi) / 180; //lat distance in rad
+        double dLong = (endLong * pi) / 180 - (startLong * pi) / 180; //long distance
 
         double Haversine = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) + Math.Cos(startLat * pi / 180) * Math.Cos(endLat * pi / 180) * Math.Sin(dLong / 2) * Math.Sin(dLong / 2); //the Haversine formula (square of half the length of a chord)
-        double angle = 2 * Math.Atan2(Math.Sqrt(Haversine), Math.Sqrt(1 - Haversine)); // finds the central angle in the earth
+        double angle = 2 * Math.Atan2(Math.Sqrt(Haversine), Math.Sqrt(1 - Haversine)); //central angle in the earth
 
-        double d = angle * radius; //in km
-        d = d * 1000; //convert to meters
+        double d = angle * radius;
+        d = d * 1000; //to meters
         return Math.Round(d,3);
     }
     private string getOutput(int[] stationID)
-    {//takes array of in IDs adn converts to path
+    {
 
         var stationNames = new Dictionary<int, string>();
 
         try
         {
-            using var SQLconnection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); //connecting to the database
+            using var SQLconnection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\"");
             var getNameCommand = SQLconnection.CreateCommand();
 
             SQLconnection.Open();
 
-            string[] path = stationID.Select((ID, index) => $"@{index}").ToArray();//gets id inputs and converts index for sql format
+            string[] path = stationID.Select((ID, index) => $"@{index}").ToArray();
 
             getNameCommand.CommandText = $@"
             SELECT Station_ID, Name
             FROM Stations
             WHERE Station_ID IN ({string.Join(",", path)})
-            ";//sql query   
+            "; 
 
             
             var lines = new List<int>();
@@ -420,7 +395,6 @@ public partial class NavigationPage : ContentPage //inheritance
             }
             
             return output;
-            //return string.Join(" TO ", stationID.Select(id => stationNames[id]));
         }
         catch(Exception e)
         {
@@ -429,4 +403,6 @@ public partial class NavigationPage : ContentPage //inheritance
 
         return "error no path returned";
     }
+
+
 }

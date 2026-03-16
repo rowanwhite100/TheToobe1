@@ -39,7 +39,7 @@
                    />
 
             <Button x:Name="Initate_button"
-                    Text="Navigate!"
+                    Text="Entre Staion names"
                     Clicked="OnInitiateClicked"
                     Grid.Row="2"
                     Grid.Column="1"
