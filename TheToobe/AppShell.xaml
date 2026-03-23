@@ -27,10 +27,7 @@
             <ShellContent ContentTemplate="{DataTemplate local:NavigationPage}"/>
         </Tab>
 
-        <Tab Title="Romended Journeys"
-             Icon="reccomended.png">
-            <ShellContent ContentTemplate="{DataTemplate local:RecomendedPage}"/>
-        </Tab>
+        
     </TabBar>
 
 </Shell>

@@ -3,6 +3,7 @@ namespace TheToobe;
 using Microsoft.Data.Sqlite;
 using Microsoft.Maui.Controls;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using static SQLite.SQLite3;
@@ -107,7 +108,7 @@ public partial class NavigationPage : ContentPage
  
     public static Dictionary<int, (double Latitude, double Longitude)> StationCoords = new Dictionary<int, (double Latitude, double Longitude)>();
 
-    public Dictionary<int, List<(int, double)>> graph = BuildAdjacencyList();
+    public Dictionary<int, List<(int, double, int)>> graph = BuildAdjacencyList();
     public int CheckStation(string Station)
     {
         try
@@ -121,7 +122,7 @@ public partial class NavigationPage : ContentPage
                 WHERE Name = @StationInput
                 ";
             using var command = new SqliteCommand(sql, connection);
-            command.Parameters.AddWithValue("@StationInput", Station + "%");
+            command.Parameters.AddWithValue("@StationInput", Station);
 
             using var reader = command.ExecuteReader();
             
@@ -148,12 +149,11 @@ public partial class NavigationPage : ContentPage
             DisplayAlert("sql", $"sql executed for '{e.Message}'", "OK");
         }
 
-        DisplayAlert("error", $"something bad went worng for {Station}", "OK");
         return -1; //station not found
     }
-    public static Dictionary<int, List<(int neighbour, double distance)>> BuildAdjacencyList()
+    public static Dictionary<int, List<(int neighbour, double distance, int time)>> BuildAdjacencyList()
     {
-        var adjacencyList = new Dictionary<int, List<(int, double)>>();
+        var adjacencyList = new Dictionary<int, List<(int, double, int)>>();
         
         using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\"");
         try
@@ -162,7 +162,7 @@ public partial class NavigationPage : ContentPage
 
             var ConnectionCommand = connection.CreateCommand();
             ConnectionCommand.CommandText = @"
-            SELECT Station1, Station2
+            SELECT Station1, Station2, Travel_Time
             FROM Connections
             ";//returns station connections IDs
 
@@ -189,14 +189,15 @@ public partial class NavigationPage : ContentPage
             {
                 int startStation = reader.GetInt32(0);
                 int endStation = reader.GetInt32(1);
+                int time  = reader.GetInt32(2);
 
                 var (startLat, startLong) = StationCoords[startStation];
                 var (endLat, endLong) = StationCoords[endStation];
 
                 double distance = DistanceConverter(startLat, startLong, endLat, endLong);
 
-                AddConnection(adjacencyList, startStation, endStation, distance);
-                AddConnection(adjacencyList, endStation, startStation, distance);
+                AddConnection(adjacencyList, startStation, endStation, distance, time);
+                AddConnection(adjacencyList, endStation, startStation, distance,time);
                 //stores the neigbours coords (at 4,5) THEN the current (at 6,7)
 
                 //undirected grahp hence bothways
@@ -211,18 +212,18 @@ public partial class NavigationPage : ContentPage
 
         return adjacencyList;
     }
-    private static void AddConnection(Dictionary<int, List<(int station, double distance)>> graph, int startStat, int endStat, double distance) 
+    private static void AddConnection(Dictionary<int, List<(int station, double distance, int time)>> graph, int startStat, int endStat, double distance, int time) 
     { 
         if (!graph.TryGetValue(startStat, out var neighbors))
         {
-            neighbors = new List<(int, double)>();
+            neighbors = new List<(int, double, int)>();
             graph[startStat] = neighbors;
         }
         
-        if (!neighbors.Any(x => x.station == endStat))//checks each station value x in niebours 
+        if (!neighbors.Any(x => x.station == endStat))//checks to avoid duplicates
         {
-            neighbors.Add((endStat,distance));
-        }//this avoids duplicate entries
+            neighbors.Add((endStat,distance,time));
+        }
     }
     private string AstarTraversal(int origin, int destination)
     {
@@ -278,7 +279,10 @@ public partial class NavigationPage : ContentPage
         int[] shortestPath = nodePredeccesors[destination].ToArray();
         shortestPath = shortestPath.Append(destination).ToArray();   
 
-        return getOutput(shortestPath);
+        getTravelTime(shortestPath);
+        //cost
+
+        return getLineOutput(shortestPath);
     }
     private static double DistanceConverter(double startLat, double startLong, double endLat, double endLong)
     {
@@ -295,7 +299,7 @@ public partial class NavigationPage : ContentPage
         d = d * 1000; //to meters
         return Math.Round(d,3);
     }
-    private string getOutput(int[] stationID)
+    private string getLineOutput(int[] stationID)
     {
 
         var stationNames = new Dictionary<int, string>();
@@ -404,5 +408,119 @@ public partial class NavigationPage : ContentPage
         return "error no path returned";
     }
 
+    private void getTravelTime(int[] path)
+    {
+        int totalTravel = 0;
 
+        for (int i = 0; i < path.Length - 1; i++)
+        {
+            int currentStation = path[i];
+            int nextStation = path[i + 1];
+
+            var neighbors = graph[currentStation];
+
+            var connection = neighbors.FirstOrDefault(n => n.Item1 == nextStation);
+
+            if (connection != default)
+            {
+                totalTravel += connection.Item3; // time
+            }
+            else
+            {
+                Console.WriteLine($"No connection found from {currentStation} to {nextStation}");
+            }
+        }
+
+
+        Time_Entry.Text = ($"{totalTravel} mins");
+    }
+
+    
+    private int getZone(int stationID)
+    {
+        using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\"");
+        try
+        {
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+            SELECT Zone
+            FROM Stations
+            WHERE Station_ID = @station
+            ";
+
+            command.Parameters.AddWithValue("@station", stationID);
+
+            using var reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                connection.Close();
+                return reader.GetInt32(0);
+            }
+            
+        }
+        catch (Exception e)
+        {
+            Console.Write($"Error {e.Message}");
+        }
+
+        return -1;
+    }
+
+    private void getCost(int[] path)
+    {
+        int startStation = path[0];
+        int endStation = path[path.Length - 1];
+
+        int zone1 = getZone(startStation);
+        int zone2 = getZone(endStation);
+
+        if (zone1 == -1 || zone2 == -1)
+        {
+            DisplayAlert("error", "zone was not found for stations", "ok");
+        }
+
+        DayOfWeek day = DateTime.Today.DayOfWeek;
+        bool peak = false;
+
+        switch (day)
+        {
+            case (DayOfWeek.Sunday):
+                peak = false;
+                break;
+            case (DayOfWeek.Saturday):
+                peak = false;
+                break;
+            default:
+                peak = true;
+                break;
+        }
+
+        if (peak)
+        {
+            TimeSpan MorningStart = new TimeSpan(6, 30, 0);
+            TimeSpan morningEnd = new TimeSpan(9, 30, 0);
+            TimeSpan eveningStart = new TimeSpan(16, 0, 0);
+            TimeSpan eveningEnd = new TimeSpan(19, 0, 0);
+
+            TimeSpan now = DateTime.Now.TimeOfDay;
+
+            if ((now > MorningStart) && (now < morningEnd))
+            {
+                peak = true;
+            }
+            if ((now > eveningStart) && (now < eveningEnd))
+            {
+                peak = true;
+            }
+            else
+            {
+                peak = false;
+            }
+        }
+
+        //in progress
+
+    }
 }

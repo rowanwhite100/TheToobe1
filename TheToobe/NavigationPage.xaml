@@ -105,7 +105,7 @@
            Placeholder="TIME taken"
            Grid.Column="2"
            Grid.Row="5"
-               IsReadOnly="True"
+           IsReadOnly="True"
            />
 
 
