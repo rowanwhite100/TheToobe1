@@ -2,9 +2,11 @@ namespace TheToobe;
 
 using Microsoft.Data.Sqlite;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.Shapes;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO.IsolatedStorage;
 using System.Text.RegularExpressions;
 using static SQLite.SQLite3;
 
@@ -38,6 +40,7 @@ public partial class NavigationPage : ContentPage
         else
         {
             OutputBox.Text = AstarTraversal(Station1ID, Station2ID);
+            //OutputBox.Text = Convert.ToString(getZone(Station1ID));
         }
     }
     private void OneTextChanged(object sender, TextChangedEventArgs e)
@@ -280,7 +283,7 @@ public partial class NavigationPage : ContentPage
         shortestPath = shortestPath.Append(destination).ToArray();   
 
         getTravelTime(shortestPath);
-        //cost
+        getCost(shortestPath);
 
         return getLineOutput(shortestPath);
     }
@@ -407,7 +410,6 @@ public partial class NavigationPage : ContentPage
 
         return "error no path returned";
     }
-
     private void getTravelTime(int[] path)
     {
         int totalTravel = 0;
@@ -434,8 +436,6 @@ public partial class NavigationPage : ContentPage
 
         Time_Entry.Text = ($"{totalTravel} mins");
     }
-
-    
     private int getZone(int stationID)
     {
         using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\"");
@@ -455,19 +455,23 @@ public partial class NavigationPage : ContentPage
             using var reader = command.ExecuteReader();
             if (reader.Read())
             {
+                int output = reader.GetInt32(0);
                 connection.Close();
-                return reader.GetInt32(0);
+                return output;
+            }
+            else
+            {
+                DisplayAlert("get zone error", $"no reading was done", "OK");
             }
             
         }
         catch (Exception e)
         {
-            Console.Write($"Error {e.Message}");
+            DisplayAlert("get zone error", $"{e}", "OK");
         }
 
         return -1;
     }
-
     private void getCost(int[] path)
     {
         int startStation = path[0];
@@ -482,7 +486,7 @@ public partial class NavigationPage : ContentPage
         }
 
         DayOfWeek day = DateTime.Today.DayOfWeek;
-        bool peak = false;
+        bool peak = true;
 
         switch (day)
         {
@@ -496,7 +500,6 @@ public partial class NavigationPage : ContentPage
                 peak = true;
                 break;
         }
-
         if (peak)
         {
             TimeSpan MorningStart = new TimeSpan(6, 30, 0);
@@ -520,7 +523,76 @@ public partial class NavigationPage : ContentPage
             }
         }
 
-        //in progress
+        List<string[]> temp = new List<string[]>();
+        using (StreamReader reader = new StreamReader("C:\\Users\\rowan\\source\\repos\\NEA\\farePrices.csv"))
+        {
+            string line;
 
+            while ((line = reader.ReadLine()) != null)
+            {
+                string[] feilds = line.Split(',');
+                temp.Add(feilds);
+            }
+        }
+        string[][] farePrices = temp.ToArray();
+
+        
+        int rightPointer = farePrices.Length - 1;
+
+        int goal;
+        if (zone1 > zone2)
+        {
+            goal = Convert.ToInt32($"{zone2}{zone1}");
+        }
+        else
+        {
+            goal = Convert.ToInt32($"{zone1}{zone2}");
+        }
+
+        double cost = BinarySearch(rightPointer, goal, farePrices, peak);
+        string output;
+
+        if (cost.ToString().Contains("."))
+        {
+            output = Convert.ToString(cost + "0");
+        
+        }
+        else
+        {
+            output = Convert.ToString(cost + ".00");
+        }
+
+        Cost_Entry.Text = $"{output}";
+    }
+
+    private double BinarySearch(int rightPointer, int goal, string[][] farePrices, bool peak)
+    {
+        int leftPointer = 0;
+
+        while (leftPointer <= rightPointer)
+        {
+            int midpoint = (leftPointer + rightPointer) / 2;
+
+            if (Convert.ToInt16(farePrices[midpoint][0]) > goal)
+            {
+                rightPointer = midpoint - 1;
+            }
+            else if (Convert.ToInt16(farePrices[midpoint][0]) < goal)
+            {
+                leftPointer = midpoint + 1;
+            }
+            else if (Convert.ToInt16(farePrices[midpoint][0]) == goal)
+            {
+                if (peak)
+                {
+                    return Convert.ToInt32(farePrices[midpoint][2]);
+                }
+                else
+                {
+                    return Convert.ToDouble(farePrices[midpoint][1]);
+                }
+            }
+        }
+        return -1;//not found
     }
 }
