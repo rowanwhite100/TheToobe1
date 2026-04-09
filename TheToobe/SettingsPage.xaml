@@ -4,9 +4,27 @@
              x:Class="TheToobe.SettingsPage"
              >
     <VerticalStackLayout>
-        <Label 
-            Text="Settings"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
+
+        <Grid Margin="20,20,20,20"
+              RowDefinitions="*, *"
+              ColumnDefinitions="*, *, *"
+              >
+
+            <Label Text="Commuter Mode - DISABLED"
+                   x:Name="modeLabel"
+                   FontFamily="London-Tube"
+                   Grid.Column="0"
+                   Grid.Row="0"
+                   VerticalTextAlignment="Center"
+                   />
+
+            <Switch IsToggled="false"
+                    Grid.Column="1"
+                    Grid.Row="0"
+                    x:Name="travelModeSwitch"
+                    Toggled="OnModeSwitch" 
+                    />
+
+        </Grid>
     </VerticalStackLayout>
 </ContentPage>

@@ -16,6 +16,26 @@ public partial class NavigationPage : ContentPage
     {
         InitializeComponent();
     }
+    private async Task<string> checkMode()
+    {
+        try
+        {   
+            string mode = await SecureStorage.Default.GetAsync("Mode");
+
+            if (mode == null)
+            {
+                mode = "commuter";
+            }
+            return mode;
+        }
+        catch(Exception e) 
+        {
+            await DisplayAlert("Error", $"{e}", "OK");
+            await SecureStorage.Default.SetAsync("Mode", "commuter");
+            return await checkMode();
+        }
+        return await SecureStorage.Default.GetAsync("Mode");
+    }
     private async void OnInitiateClicked(object sender, EventArgs args) 
     {
         var textInfo = new CultureInfo("en-UK",false).TextInfo;
@@ -39,7 +59,7 @@ public partial class NavigationPage : ContentPage
         }
         else
         {
-            OutputBox.Text = AstarTraversal(Station1ID, Station2ID);
+            OutputBox.Text = await AstarTraversal(Station1ID, Station2ID);
             //OutputBox.Text = Convert.ToString(getZone(Station1ID));
         }
     }
@@ -108,9 +128,7 @@ public partial class NavigationPage : ContentPage
             Initate_button.Text = "Enter station names";
         }
     }
- 
     public static Dictionary<int, (double Latitude, double Longitude)> StationCoords = new Dictionary<int, (double Latitude, double Longitude)>();
-
     public Dictionary<int, List<(int, double, int)>> graph = BuildAdjacencyList();
     public int CheckStation(string Station)
     {
@@ -228,7 +246,7 @@ public partial class NavigationPage : ContentPage
             neighbors.Add((endStat,distance,time));
         }
     }
-    private string AstarTraversal(int origin, int destination)
+    private async Task<string> AstarTraversal(int origin, int destination)
     {
         double[] bestDistance = new double[310]; // array of best distances to each node from the source
         PriorityQueue<int, double> nodesToVisit = new PriorityQueue<int, double>(); //priority queue of nodes to visit organised by ID, heuristic + distance
@@ -245,6 +263,8 @@ public partial class NavigationPage : ContentPage
         (double originLat, double originLong) = StationCoords[origin];
         (double DestinationLat, double DestinationLong) = StationCoords[destination];
 
+        string mode = await checkMode();
+
         while (nodesToVisit.Count > 0)
         {
             nodesToVisit.TryDequeue(out int current, out double priority);
@@ -254,15 +274,34 @@ public partial class NavigationPage : ContentPage
                 foreach (var neighbour in graph[current])//explores all neighbours
                 {
                     int neigbourStation = neighbour.Item1;
-                    double nextDistance = neighbour.Item2;
+                    double edge = neighbour.Item2;
 
                     (double neighbourLat, double neighbourLong) = StationCoords[neighbour.Item1];
 
                     double currentDistance = bestDistance[current];
 
-                    double heuristic = DistanceConverter(DestinationLat,DestinationLong,neighbourLat,neighbourLong);
+                    double heuristic = 0;
+                    //changing the mode only changins the heuristic
 
-                    double neighbourPriority = Math.Round(currentDistance + nextDistance + heuristic, 0);
+                    if (mode == "commuter")
+                    {
+                        heuristic = DistanceConverter(DestinationLat, DestinationLong, neighbourLat, neighbourLong);
+                        //finds absoute shortest distance
+                        // A* search
+                    }
+                    else if (mode == "tourist")
+                    {
+                        heuristic = DistanceConverter(DestinationLat, DestinationLong, neighbourLat, neighbourLong);
+                        edge = 1;
+                        //with edge of 1 only heusistic is considered for least stops
+                        //bredth first search
+                    }
+                    else
+                    {
+                        await DisplayAlert("mode error", $"mode was not found - {mode}", "OK");
+                    }
+
+                    double neighbourPriority = Math.Round(currentDistance + edge + heuristic, 0);
 
                     nodesToVisit.Enqueue(neigbourStation, neighbourPriority);
 
@@ -500,6 +539,7 @@ public partial class NavigationPage : ContentPage
                 peak = true;
                 break;
         }
+
         if (peak)
         {
             TimeSpan MorningStart = new TimeSpan(6, 30, 0);
@@ -509,11 +549,7 @@ public partial class NavigationPage : ContentPage
 
             TimeSpan now = DateTime.Now.TimeOfDay;
 
-            if ((now > MorningStart) && (now < morningEnd))
-            {
-                peak = true;
-            }
-            if ((now > eveningStart) && (now < eveningEnd))
+            if ((now > MorningStart && now < morningEnd) || (now > eveningStart && now < eveningEnd))
             {
                 peak = true;
             }
@@ -564,7 +600,6 @@ public partial class NavigationPage : ContentPage
 
         Cost_Entry.Text = $"{output}";
     }
-
     private double BinarySearch(int rightPointer, int goal, string[][] farePrices, bool peak)
     {
         int leftPointer = 0;

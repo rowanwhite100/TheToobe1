@@ -7,8 +7,6 @@
     <ScrollView Orientation="Both">
         <VerticalStackLayout>
 
-            <Label Text="staer"/>
-
             <Image Source="tube_map1.png">
                 <Image.GestureRecognizers>
                     <PinchGestureRecognizer PinchUpdated="OnPinchUpdated" />
