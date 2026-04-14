@@ -5,8 +5,6 @@ VisualStudioVersion = 17.14.36414.22
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheToobe", "TheToobe.csproj", "{169BBF7B-CAE9-4838-B37B-50E4ED67ED85}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExternalAPI", "..\ExternalAPI\ExternalAPI.csproj", "{C898F966-3508-4370-9B6F-C3DDC09AEEB8}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,12 +13,9 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{169BBF7B-CAE9-4838-B37B-50E4ED67ED85}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{169BBF7B-CAE9-4838-B37B-50E4ED67ED85}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{169BBF7B-CAE9-4838-B37B-50E4ED67ED85}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
 		{169BBF7B-CAE9-4838-B37B-50E4ED67ED85}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{169BBF7B-CAE9-4838-B37B-50E4ED67ED85}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C898F966-3508-4370-9B6F-C3DDC09AEEB8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C898F966-3508-4370-9B6F-C3DDC09AEEB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C898F966-3508-4370-9B6F-C3DDC09AEEB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C898F966-3508-4370-9B6F-C3DDC09AEEB8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
