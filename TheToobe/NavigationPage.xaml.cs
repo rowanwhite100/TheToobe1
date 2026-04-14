@@ -12,6 +12,7 @@ using static SQLite.SQLite3;
 
 public partial class NavigationPage : ContentPage
 {
+    public TextInfo textInfo = new CultureInfo("en-UK", false).TextInfo;
     public NavigationPage()
     {
         InitializeComponent();
@@ -38,7 +39,6 @@ public partial class NavigationPage : ContentPage
     }
     private async void OnInitiateClicked(object sender, EventArgs args) 
     {
-        var textInfo = new CultureInfo("en-UK",false).TextInfo;
         string origin = textInfo.ToTitleCase(Station1_input.Text.Trim().ToLower());
         string detination = textInfo.ToTitleCase(Station2_input.Text.Trim().ToLower());
 
@@ -134,7 +134,8 @@ public partial class NavigationPage : ContentPage
     {
         try
         {
-            using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\""); 
+            using var connection = new SqliteConnection("Data Source=C:\\Users\\rowan\\source\\repos\\NEA\\TheToobe\\Resources\\Data\\ToobeDataBase.db");
+            //using var connection = new SqliteConnection(string.Concat(FileSystem.AppDataDirectory, "TheToobe\\Resources\\Data\\ToobeDataBase.db"));
             connection.Open();
 
             var sql = @"
@@ -176,7 +177,7 @@ public partial class NavigationPage : ContentPage
     {
         var adjacencyList = new Dictionary<int, List<(int, double, int)>>();
         
-        using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\"");
+        using var connection = new SqliteConnection("Data Source=C:\\Users\\rowan\\source\\repos\\NEA\\TheToobe\\Resources\\Data\\ToobeDataBase.db");
         try
         {
             connection.Open();
@@ -348,7 +349,7 @@ public partial class NavigationPage : ContentPage
 
         try
         {
-            using var SQLconnection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\"");
+            using var SQLconnection = new SqliteConnection("Data Source=C:\\Users\\rowan\\source\\repos\\NEA\\TheToobe\\Resources\\Data\\ToobeDataBase.db");
             var getNameCommand = SQLconnection.CreateCommand();
 
             SQLconnection.Open();
@@ -434,7 +435,7 @@ public partial class NavigationPage : ContentPage
                 
                 if (i == stationID.Length - 2)
                 {
-                    output += $"{stationNames[station1]}";
+                    output += $"{textInfo.ToTitleCase(Station2_input.Text)}";
                 }
 
                 lastLine = lineID;
@@ -477,7 +478,7 @@ public partial class NavigationPage : ContentPage
     }
     private int getZone(int stationID)
     {
-        using var connection = new SqliteConnection("Data Source=\"C:\\Users\\rowan\\source\\repos\\NEA\\ToobeDataBase.db\"");
+        using var connection = new SqliteConnection("Data Source=C:\\Users\\rowan\\source\\repos\\NEA\\TheToobe\\Resources\\Data\\ToobeDataBase.db");
         try
         {
             connection.Open();
@@ -560,14 +561,15 @@ public partial class NavigationPage : ContentPage
         }
 
         List<string[]> temp = new List<string[]>();
-        using (StreamReader reader = new StreamReader("C:\\Users\\rowan\\source\\repos\\NEA\\farePrices.csv"))
+        using (StreamReader reader = new StreamReader("C:\\Users\\rowan\\source\\repos\\NEA\\TheToobe\\Resources\\Data\\farePrices.csv"))
         {
-            string line;
+            string line = reader.ReadLine();
 
-            while ((line = reader.ReadLine()) != null)
+            while (line != null)
             {
                 string[] feilds = line.Split(',');
                 temp.Add(feilds);
+                line = reader.ReadLine();
             }
         }
         string[][] farePrices = temp.ToArray();
@@ -590,12 +592,12 @@ public partial class NavigationPage : ContentPage
 
         if (cost.ToString().Contains("."))
         {
-            output = Convert.ToString(cost + "0");
+            output = Convert.ToString("£" + cost + "0");
         
         }
         else
         {
-            output = Convert.ToString(cost + ".00");
+            output = Convert.ToString("£" + cost + ".00");
         }
 
         Cost_Entry.Text = $"{output}";
