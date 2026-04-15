@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using SQLitePCL;
 
 namespace TheToobe
 {
@@ -6,6 +7,8 @@ namespace TheToobe
     {
         public static MauiApp CreateMauiApp()
         {
+            Batteries.Init();
+
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()

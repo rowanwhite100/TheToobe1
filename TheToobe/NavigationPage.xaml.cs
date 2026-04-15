@@ -4,6 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO.IsolatedStorage;
@@ -12,10 +13,32 @@ using static SQLite.SQLite3;
 
 public partial class NavigationPage : ContentPage
 {
-    public TextInfo textInfo = new CultureInfo("en-UK", false).TextInfo;
+    public TextInfo textInfo = new CultureInfo("en-GB", false).TextInfo;
     public NavigationPage()
     {
-        InitializeComponent();
+        InitializeComponent();       
+    }
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        await InitializeDatabase();
+    }
+    private async Task InitializeDatabase()
+    {
+        string dbPath = System.IO.Path.Combine(FileSystem.AppDataDirectory, "ToobeDataBase.db");
+
+        if (!File.Exists(dbPath))
+        {
+            await CopyDatabase(dbPath);
+        }
+
+        graph = BuildAdjacencyList();
+    }
+    private async Task CopyDatabase(string dbPath)
+    {
+        using var stream = await FileSystem.OpenAppPackageFileAsync("ToobeDataBase.db");
+        using var fileStream = File.Create(dbPath);
+        await stream.CopyToAsync(fileStream);
     }
     private async Task<string> checkMode()
     {
@@ -129,14 +152,17 @@ public partial class NavigationPage : ContentPage
         }
     }
     public static Dictionary<int, (double Latitude, double Longitude)> StationCoords = new Dictionary<int, (double Latitude, double Longitude)>();
-    public Dictionary<int, List<(int, double, int)>> graph = BuildAdjacencyList();
+    public Dictionary<int, List<(int, double, int)>> graph;
     public int CheckStation(string Station)
     {
         try
         {
-            using var connection = new SqliteConnection("Data Source=C:\\Users\\rowan\\source\\repos\\NEA\\TheToobe\\Resources\\Data\\ToobeDataBase.db");
-            //using var connection = new SqliteConnection(string.Concat(FileSystem.AppDataDirectory, "TheToobe\\Resources\\Data\\ToobeDataBase.db"));
+            string dbPath = System.IO.Path.Combine(FileSystem.AppDataDirectory, "ToobeDataBase.db");
+            using var connection = new SqliteConnection($"Data Source={dbPath}"); 
+            
+            
             connection.Open();
+           
 
             var sql = @"
                 SELECT Name, Station_ID
@@ -176,8 +202,10 @@ public partial class NavigationPage : ContentPage
     public static Dictionary<int, List<(int neighbour, double distance, int time)>> BuildAdjacencyList()
     {
         var adjacencyList = new Dictionary<int, List<(int, double, int)>>();
+
+        string dbPath = System.IO.Path.Combine(FileSystem.AppDataDirectory, "ToobeDataBase.db");
+        using var connection = new SqliteConnection($"Data Source={dbPath}"); 
         
-        using var connection = new SqliteConnection("Data Source=C:\\Users\\rowan\\source\\repos\\NEA\\TheToobe\\Resources\\Data\\ToobeDataBase.db");
         try
         {
             connection.Open();
@@ -349,10 +377,11 @@ public partial class NavigationPage : ContentPage
 
         try
         {
-            using var SQLconnection = new SqliteConnection("Data Source=C:\\Users\\rowan\\source\\repos\\NEA\\TheToobe\\Resources\\Data\\ToobeDataBase.db");
-            var getNameCommand = SQLconnection.CreateCommand();
+            string dbPath = System.IO.Path.Combine(FileSystem.AppDataDirectory, "ToobeDataBase.db");
+            using var connection = new SqliteConnection($"Data Source={dbPath}"); 
+            var getNameCommand = connection.CreateCommand();
 
-            SQLconnection.Open();
+            connection.Open();
 
             string[] path = stationID.Select((ID, index) => $"@{index}").ToArray();
 
@@ -379,10 +408,10 @@ public partial class NavigationPage : ContentPage
 
                 stationNames[id] = name;
             }
-            SQLconnection.Close();
+            connection.Close();
 
 
-            SQLconnection.Open();
+            connection.Open();
 
             var lineNames = new Dictionary<int, string>
             {
@@ -410,7 +439,7 @@ public partial class NavigationPage : ContentPage
                 int station1 = stationID[i];
                 int station2 = stationID[i + 1];
 
-                var lineCommand = SQLconnection.CreateCommand();
+                var lineCommand = connection.CreateCommand();
 
                 lineCommand.CommandText = @"
                 SELECT Line
@@ -478,7 +507,9 @@ public partial class NavigationPage : ContentPage
     }
     private int getZone(int stationID)
     {
-        using var connection = new SqliteConnection("Data Source=C:\\Users\\rowan\\source\\repos\\NEA\\TheToobe\\Resources\\Data\\ToobeDataBase.db");
+        string dbPath = System.IO.Path.Combine(FileSystem.AppDataDirectory, "ToobeDataBase.db");
+        using var connection = new SqliteConnection($"Data Source={dbPath}"); 
+        
         try
         {
             connection.Open();
@@ -512,7 +543,7 @@ public partial class NavigationPage : ContentPage
 
         return -1;
     }
-    private void getCost(int[] path)
+    private async void getCost(int[] path)
     {
         int startStation = path[0];
         int endStation = path[path.Length - 1];
@@ -522,7 +553,8 @@ public partial class NavigationPage : ContentPage
 
         if (zone1 == -1 || zone2 == -1)
         {
-            DisplayAlert("error", "zone was not found for stations", "ok");
+            await DisplayAlert("error", "zone was not found for stations", "ok");
+            return;
         }
 
         DayOfWeek day = DateTime.Today.DayOfWeek;
@@ -561,7 +593,10 @@ public partial class NavigationPage : ContentPage
         }
 
         List<string[]> temp = new List<string[]>();
-        using (StreamReader reader = new StreamReader("C:\\Users\\rowan\\source\\repos\\NEA\\TheToobe\\Resources\\Data\\farePrices.csv"))
+
+        using (var streamTask = FileSystem.OpenAppPackageFileAsync("farePrices.csv"))
+        using (var stream = await streamTask)
+        using (var reader = new StreamReader(stream))
         {
             string line = reader.ReadLine();
 
@@ -574,7 +609,7 @@ public partial class NavigationPage : ContentPage
         }
         string[][] farePrices = temp.ToArray();
 
-        
+
         int rightPointer = farePrices.Length - 1;
 
         int goal;
@@ -622,7 +657,7 @@ public partial class NavigationPage : ContentPage
             {
                 if (peak)
                 {
-                    return Convert.ToInt32(farePrices[midpoint][2]);
+                    return Convert.ToDouble(farePrices[midpoint][2]);
                 }
                 else
                 {

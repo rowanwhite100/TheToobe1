@@ -3,42 +3,47 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="TheToobe.NavigationPage"
              >
+    
     <ScrollView Orientation="Vertical">
-        <Grid Margin="20,35,20,20"
+        <VerticalStackLayout>
+
+
+            <Grid Margin="20,35,20,20"
               RowDefinitions="*, *, *, *, *, *" 
               ColumnDefinitions="100, 50, 100, 50, *"
-              Padding="20">
+              Padding="20"
+              Grid.Column="0"
+              Grid.Row="0">
 
-            <Label
+                <Label
                  Text="Station 1"
                      FontFamily="London-Tube"
                     Grid.Column="0"
                     Grid.Row="0"
                     />
-            
-            <Entry x:Name="Station1_input"
+
+                <Entry x:Name="Station1_input"
                      Placeholder="Temporary 1"
                      Grid.Column="0"
                     Grid.Row="1"
                      TextChanged="OneTextChanged"
                      />
-                   
-            <Label 
+
+                <Label 
                     Text="Station 2"
                      FontFamily="London-Tube"
                     Grid.Row="0"
                     Grid.Column="2"
-                  
                  />
 
-            <Entry x:Name="Station2_input"
+                <Entry x:Name="Station2_input"
                 Placeholder="temp 2"
                  Grid.Column="2"
                 Grid.Row="1"
                    TextChanged="TwoTextChanged"
                    />
 
-            <Button x:Name="Initate_button"
+                <Button x:Name="Initate_button"
                     Text="Entre Staion names"
                     Clicked="OnInitiateClicked"
                     Grid.Row="2"
@@ -47,69 +52,86 @@
                     WidthRequest="150" 
                     IsEnabled="False"
                     Background="#838D93"
-                    TextColor="Black">
-                <VisualStateManager.VisualStateGroups>
-                    <VisualStateGroupList>
-                        <VisualStateGroup x:Name="CommonStates">
-                            <VisualState x:Name="Normal">
-                                <VisualState.Setters>
-                                    <Setter Property="Scale"
+                    TextColor="Black"
+                    Margin="10">
+                    <VisualStateManager.VisualStateGroups>
+                        <VisualStateGroupList>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal">
+                                    <VisualState.Setters>
+                                        <Setter Property="Scale"
                                 Value="1" />
-                                </VisualState.Setters>
-                            </VisualState>
-                            <VisualState x:Name="Pressed">
-                                <VisualState.Setters>
-                                    <Setter Property="Scale"
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Property="Scale"
                                 Value="0.8" />
-                                </VisualState.Setters>
-                            </VisualState>
-                            <VisualState x:Name="PointerOver" />
-                        </VisualStateGroup>
-                    </VisualStateGroupList>
-                </VisualStateManager.VisualStateGroups>
-            </Button>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="PointerOver" />
+                            </VisualStateGroup>
+                        </VisualStateGroupList>
+                    </VisualStateManager.VisualStateGroups>
+                </Button>
+            </Grid>
 
 
-                <Label
-                Text="Output"
-                Grid.Column="4"
-                Grid.Row="0"
-                />
+            <Grid Margin="20,35,20,20"
+              RowDefinitions="*, *, *, *, *, *" 
+              ColumnDefinitions="10, *"
+              Padding="20">
+                <HorizontalStackLayout Margin="10"
+                     Grid.Column="1"
+                          Grid.Row="1">
 
-            <Editor
-                x:Name="OutputBox"
-                Placeholder="Output"
-                Grid.Row="2"
-                Grid.Column="4"
-                MinimumHeightRequest="300"
-                MinimumWidthRequest="200"
-                IsReadOnly="True"
-                />
+                    <Editor
+                         x:Name="OutputBox"
+                         Placeholder="Output"
+                          Grid.Row="2"
+                          Grid.Column="4"
+                          MinimumHeightRequest="100"
+                          MinimumWidthRequest="200"
+                         IsReadOnly="True"
+         
+                        />
 
-            <Label Text="Cost"
+                </HorizontalStackLayout>
+            </Grid>
+
+
+            <Grid Margin="20,35,20,20"
+              RowDefinitions="*, *, *, *, *, *" 
+              ColumnDefinitions="100, 50, 100, 50, *"
+              Padding="20"
+              Grid.Column="0"
+                Grid.Row="2">
+
+                <Label Text="Cost"
                        Grid.Column="0"
                        Grid.Row="4"/>
-            
-            <Entry x:Name="Cost_Entry"
+
+                <Entry x:Name="Cost_Entry"
                        Placeholder="Journwy cost"
                        Grid.Column="0"
                        Grid.Row="5"
-                        IsReadOnly="True"
+                       IsReadOnly="True"
                        />
 
-            <Label Text="Time"
-           Grid.Column="2"
-           Grid.Row="4"/>
+                <Label Text="Time"
+                Grid.Column="2"
+                Grid.Row="4"/>
 
-            <Entry x:Name="Time_Entry"
-           Placeholder="TIME taken"
-           Grid.Column="2"
-           Grid.Row="5"
-           IsReadOnly="True"
+                <Entry x:Name="Time_Entry"
+                 Placeholder="TIME taken"
+                 Grid.Column="2"
+                 Grid.Row="5"
+                 IsReadOnly="True"
            />
 
+            </Grid>
 
-        </Grid>
+        </VerticalStackLayout> 
     </ScrollView>
     
 </ContentPage>
